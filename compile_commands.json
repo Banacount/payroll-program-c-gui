@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "D:/codingslmao/payroll-ui",
+    "command": "gcc -I C:/Users/User/scoop/apps/gcc/current/include -I C:/Users/User/scoop/apps/gcc/current/lib/gcc/x86_64-w64-mingw32/13.2.0/include -I C:/Users/User/scoop/apps/gcc/current/lib/gcc/x86_64-w64-mingw32/13.2.0/include-fixed -I C:/Users/User/scoop/apps/gcc/current/x86_64-w64-mingw32/include -I E:/gcclibs/raylib/include -L E:/gcclibs/raylib/lib -lraylib -lopengl32 -lgdi32 -lwinmm -std=c11 -Wall -c main.c -o main.o",
+    "file": "D:/codingslmao/payroll-ui/main.c"
+  }
+]

@@ -1,0 +1,44 @@
+void distributedTableColumn(Table table_layout, Vector2 table_position, char tableValues[][100], Font cusFont, float font_size){
+  float allSizeWidth = table_layout.whole_width / table_layout.row + 1.5;
+  float allSizeHeight = table_layout.whole_height / table_layout.column;
+  float thickness = 2;
+
+  //determine row
+  for(int i_row = 0; i_row < table_layout.row; i_row++){
+    //Determine column
+    for(int i_col = 0; i_col < table_layout.column; i_col++){
+      //Offsets
+      int offsetX = (allSizeWidth + table_layout.gap_x - 2) * i_row;
+      int offsetY = (allSizeHeight + table_layout.gap_y) * i_col;
+      //Determine properties and draw them
+      Rectangle column_prop = {table_position.x + offsetX,
+                              table_position.y + offsetY, allSizeWidth, allSizeHeight};
+      DrawRectangleLinesEx(column_prop, thickness, BLACK);
+      DrawTextEx(cusFont, tableValues[(int)(i_col + (i_row * table_layout.column))],
+                 (Vector2){table_position.x + offsetX + 10, table_position.y + offsetY + 10}, font_size, 0, BLACK);
+    }
+  }
+}
+
+
+char tableValues[10][100] = {
+	"Emp No.", "Employee\nName", "Rate/Day", "No. of Days", "Gross Pay", "SSS", "Deductions\nPhilHealth", "C/A",
+	"Total\nDeduction", "Net Pay"
+};
+Table header = {10, 1, mtW, 50, 0, 0};
+
+typedef struct table {
+  int row;
+  int column;
+  float whole_width;
+  float whole_height;
+  float gap_x; float gap_y;
+} Table;
+
+//distributedTableColumn(header, (Vector2){mtX, mtY}, tableValues, raleway, 15);
+//Stack testvar[10] = {
+//  {7, 100, "001"}, {20, 100, "Vince Adrian"}, {8, 100, "500"}, {6, 100, "22"}, {15, 100, "11000"},
+//  {6, 100, "250"}, {7, 100, "150"}, {6, 100, "500"}, {10, 100, "900"}, {15, 100, "10100"}
+//};
+
+//stackable((Rectangle){mtX, mtY+50, mtW, 44}, testvar, 10, 1.6, raleway, 18, (Color){0, 0, 0, 0});
