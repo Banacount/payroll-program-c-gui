@@ -141,7 +141,7 @@ int main(){
       cancelBtnSw = false;
     } else if(nextBtnSw){
       createStep++;
-      if(isCreate) addRecord(&typingMode, &createStep, stringType, createGuide, &typeCount, &payrollFill, &refreshBool1);
+      if(isCreate && !onEditMode) addRecord(&typingMode, &createStep, stringType, createGuide, &typeCount, &payrollFill, &refreshBool1);
       if(onEditMode && createStep == 2){
         updateRecord(editPath[0], editPath[1], stringType, &refreshBool1);
         typingMode = 0;
@@ -377,11 +377,11 @@ void updateRecord(int id, int row_index, char modify_value[], bool *success){
       if (p.emp_no == id) {
           found = true;
           if(row_index == 1) strcpy(p.emp_name, modify_value);
-          if(row_index == 2) p.rate_per_day = atoi(modify_value);
+          if(row_index == 2) p.rate_per_day = atof(modify_value);
           if(row_index == 3) p.days_worked = atoi(modify_value);
-          if(row_index == 5) p.sss_contrib = atoi(modify_value);
-          if(row_index == 6) p.philhealth_contrib = atoi(modify_value);
-          if(row_index == 7) p.cash_advance = atoi(modify_value);
+          if(row_index == 5) p.sss_contrib = atof(modify_value);
+          if(row_index == 6) p.philhealth_contrib = atof(modify_value);
+          if(row_index == 7) p.cash_advance = atof(modify_value);
 
           computePayroll(&p);
 
@@ -389,6 +389,7 @@ void updateRecord(int id, int row_index, char modify_value[], bool *success){
           fwrite(&p, sizeof(Payroll), 1, fp);
           printf("Record updated successfully!\n");
           strcpy(logger, TextFormat("Edited the record of %s.", p.emp_name));
+          printf("Modify Value: %s", modify_value);
           break;
       }
   }
