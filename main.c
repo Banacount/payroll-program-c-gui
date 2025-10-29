@@ -3,12 +3,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #define FILENAME "payrolls.dat"
 
 //Global Variables
 int editPath[2] = {0, 0}; bool editSw = false; int onEditMode = false; float recentEditTime = 0; bool afterEdit = false;
 char logger[100] = "Made by John Rushell!";
+//Search variables
+char searchString[30] = ""; bool searchFocus = false; float snap2 = 0; float curBlink = 0.5;
+int searchStringCount = 0; 
 
 //Structures
 typedef struct stack {
@@ -43,6 +47,8 @@ void stackedPayrolls(Stack payroll_list[][10], int payroll_count, Rectangle rect
 void buttonText(char inner_text[], Font font_fam, float font_size, Vector2 position, Vector2 padding, Color bg_color);
 void buttonTextRound(bool *clicked, char inner_text[], Font font_fam, float font_size, Vector2 position, Vector2 padding, float round_percentage, Color bg_color);
 Rectangle textBoxRound(char inner_text[], Font font_fam, float font_size, Vector2 position, Vector2 padding, float round_percentage, Color bg_color);
+void drawSearch(Vector2 position, Font font, float font_size, char place_holder[]);
+void universalInput(int *char_pressed, int *type_count, char string_typed[]);
 //Typing modes
 void onlyNums(int * char_pressed, int * type_count, char string_typed[]);
 void onlyLetters(int *char_pressed, int *type_count, char string_typed[]);
@@ -91,7 +97,8 @@ int main(){
   int createStep = 0; char createGuide[50] = "";
 
   //Time shits
-  int snap1 = (int)GetTime(); float cursorDelay = 0.5;
+  float snap1 = GetTime(); float cursorDelay = 0.5;
+  snap2 = GetTime();
 
   while(!WindowShouldClose()){
     //Handle input of stringType
@@ -105,10 +112,15 @@ int main(){
         typeCount--;
         stringType[typeCount] = '\0';
       }
+      searchFocus = false;
     } else if(typingMode == 0){
         strcpy(stringType, "");
         typeCount = 0;
     }
+    if(searchFocus){
+        universalInput(&keyGet, &searchStringCount, searchString);
+    }
+    if(IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) searchFocus = false;
 
     //States Handle (For edit mode)
     if(editSw){
@@ -189,6 +201,7 @@ int main(){
     stackable((Rectangle){mtX, mtY, mtW, 50}, tableCategories, 10, 1.6, raleway, 16, (Color){199, 244, 255, 255}, -1);
     stackedPayrolls(payrollList, payrollCount, (Rectangle){mtX, mtY+50, mtW, 44}, montserrat, &scrollPayrollsValue, &refreshBool1);
     DrawTextEx(raleway, "To scroll press the 'Up' and 'Down' button in your keyboard", (Vector2){95, 482}, 15, 0, BLACK);
+    drawSearch((Vector2){530, 525}, montserrat, 22, "To search by name type here!");
     buttonTextRound(&createBtnSw, "Create", raleway, 25, (Vector2){100, 530}, (Vector2){25, 25}, 0.6, (Color){33, 194, 76, 255});
 
     //Input box
@@ -231,7 +244,6 @@ void stackable(Rectangle stackable_rect, Stack stack_list[], int stack_count, fl
                         (stack_list[i].per_h * 0.01) * stackable_rect.height };
 
     offsetX += (stack_list[i].per_w * 0.01) * stackable_rect.width;
-    //mark1
     // Green when currently editing.
     if(editPath[0] == atoi(stack_list[0].innerString) && editPath[1] == i && onEditMode) DrawRectangleRec(stac_k, GREEN);
     // Yellow when editing and after editing.
@@ -465,6 +477,26 @@ Rectangle textBoxRound(char inner_text[], Font font_fam, float font_size, Vector
   DrawTextEx(font_fam, inner_text, position, font_size, 0, WHITE);
   return rectBack;
 }
+void drawSearch(Vector2 position, Font font, float font_size, char place_holder[]){
+  //mark1
+  Vector2 textSizePlaceholder = MeasureTextEx(font, place_holder, font_size, 0);
+  Vector2 textSizeString = MeasureTextEx(font, searchString, font_size, 0);
+  Rectangle searchBarRect = {position.x-5, position.y-5, 400, textSizePlaceholder.y+10};
+  DrawRectangleLinesEx(searchBarRect, 2,BLACK);
+  DrawTextEx(font, searchString, position, font_size, 0, BLACK);
+  //Detect if search bar clicked
+  bool isClicked = (CheckCollisionPointRec(GetMousePosition(), searchBarRect) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
+  if(isClicked){
+    searchFocus = true;
+  }
+  if(strlen(searchString) <= 0) DrawTextEx(font, place_holder, position, font_size, 0, (Color){0, 0, 0, 50});
+  //Cursor blink again
+  if(GetTime() - snap2 >= curBlink && searchFocus){
+    DrawRectangleRec((Rectangle){position.x + textSizeString.x,
+                                position.y, 3, font_size}, BLACK);
+    if(GetTime() - snap2 >= curBlink*2) snap2 = GetTime();
+  }
+}
 
 
 //Typing modes
@@ -491,4 +523,43 @@ void onlyLetters(int *char_pressed, int *type_count, char string_typed[]){
     }
     *char_pressed = GetCharPressed();
   }
+}
+void universalInput(int *char_pressed, int *type_count, char string_typed[]){
+  while(*char_pressed > 0){
+    //conditions
+    bool con1 = ((*char_pressed >= 'A' && *char_pressed <= 'Z') || (*char_pressed >= 'a' && *char_pressed <= 'z'));
+    bool con2 = (*char_pressed == ' ');
+    bool con3 = ((*char_pressed >= 48) && (*char_pressed <= 57));
+
+    if((con1 || con2 || con3) && (*type_count < 28)){
+      string_typed[*type_count] = (char)*char_pressed;
+      (*type_count)++;
+      string_typed[*type_count] = '\0';
+    }
+    *char_pressed = GetCharPressed();
+  }
+  if(IsKeyPressed(KEY_BACKSPACE) && type_count > 0){
+    (*type_count)--;
+    string_typed[*type_count] = '\0';
+  } else if(IsKeyDown(KEY_LEFT) && IsKeyDown(KEY_BACKSPACE)){
+    *type_count = 0;
+    strcpy(string_typed, "");
+  }
+}
+
+//String methods
+bool matchString(const char *text, const char *pattern) {
+    // Case-insensitive, partial match
+    if (!text || !pattern) return false;
+    char lowerText[256], lowerPattern[256];
+    int i;
+    // Convert both strings to lowercase
+    for (i = 0; text[i] && i < 255; i++)
+        lowerText[i] = tolower((unsigned char)text[i]);
+    lowerText[i] = '\0';
+    for (i = 0; pattern[i] && i < 255; i++)
+        lowerPattern[i] = tolower((unsigned char)pattern[i]);
+    lowerPattern[i] = '\0';
+    // Check if pattern is contained anywhere in text
+    return strstr(lowerText, lowerPattern) != NULL;
 }
