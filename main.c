@@ -9,6 +9,7 @@
 
 //Global Variables
 int editPath[2] = {0, 0}; bool editSw = false; int onEditMode = false; float recentEditTime = 0; bool afterEdit = false;
+bool isEditHighlight = true;
 char logger[100] = "Made by John Rushell!";
 //Search variables
 char searchString[30] = ""; bool searchFocus = false; float snap2 = 0; float curBlink = 0.5;
@@ -42,6 +43,7 @@ void updateRecord(int id, int row_index, char modify_value[], bool *success);
 void deleteRecord(int employee_number);
 int getNextEmpNo();
 void computePayroll(Payroll *p);
+bool matchString(const char *text, const char *pattern);
 //Gui Elements
 void stackedPayrolls(Stack payroll_list[][10], int payroll_count, Rectangle rect, Font font, int * scroll_value, bool *refresh_stack);
 void buttonText(char inner_text[], Font font_fam, float font_size, Vector2 position, Vector2 padding, Color bg_color);
@@ -123,7 +125,8 @@ int main(){
     if(IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) searchFocus = false;
 
     //States Handle (For edit mode)
-    if(editSw){
+    if(editSw && typingMode != 0){ editSw = false; isEditHighlight = false; }
+    if(editSw && typingMode == 0){
       if(editPath[1] == 1) strcpy(createGuide, "Modify employee name:");
       if(editPath[1] == 2) strcpy(createGuide, "Modify rate per day:");
       if(editPath[1] == 3) strcpy(createGuide, "Modify days:");
@@ -134,6 +137,7 @@ int main(){
       if(editPath[1] == 1) typingMode = 2;
       if(editPath[1] >= 2) typingMode = 1;
       createStep = 1;
+      isEditHighlight = true;
       onEditMode = true;
       editSw = false;
     }
@@ -201,7 +205,7 @@ int main(){
     stackable((Rectangle){mtX, mtY, mtW, 50}, tableCategories, 10, 1.6, raleway, 16, (Color){199, 244, 255, 255}, -1);
     stackedPayrolls(payrollList, payrollCount, (Rectangle){mtX, mtY+50, mtW, 44}, montserrat, &scrollPayrollsValue, &refreshBool1);
     DrawTextEx(raleway, "To scroll press the 'Up' and 'Down' button in your keyboard", (Vector2){95, 482}, 15, 0, BLACK);
-    drawSearch((Vector2){530, 525}, montserrat, 22, "To search by name type here!");
+    drawSearch((Vector2){530, 525}, montserrat, 22, "To search by name and id type here!");
     buttonTextRound(&createBtnSw, "Create", raleway, 25, (Vector2){100, 530}, (Vector2){25, 25}, 0.6, (Color){33, 194, 76, 255});
 
     //Input box
@@ -244,14 +248,14 @@ void stackable(Rectangle stackable_rect, Stack stack_list[], int stack_count, fl
                         (stack_list[i].per_h * 0.01) * stackable_rect.height };
 
     offsetX += (stack_list[i].per_w * 0.01) * stackable_rect.width;
-    // Green when currently editing.
-    if(editPath[0] == atoi(stack_list[0].innerString) && editPath[1] == i && onEditMode) DrawRectangleRec(stac_k, GREEN);
     // Yellow when editing and after editing.
     float delayAfterEdit = 2.3;
     bool editCond1 = (editPath[0] == atoi(stack_list[0].innerString) && editPath[1] == i && GetTime()-recentEditTime <= delayAfterEdit);
-    if(editCond1 && afterEdit){
+    if(editCond1 && afterEdit && isEditHighlight){
       DrawRectangleRec(stac_k, YELLOW);
     } else if(GetTime()-recentEditTime > delayAfterEdit){ afterEdit = false; }
+    // Green when currently editing.
+    if(editPath[0] == atoi(stack_list[0].innerString) && editPath[1] == i && onEditMode) DrawRectangleRec(stac_k, GREEN);
 
     DrawRectangleRec(stac_k, Bg);
     DrawRectangleLinesEx(stac_k, thickness, BLACK);
@@ -419,13 +423,24 @@ void computePayroll(Payroll *p) {
 void stackedPayrolls(Stack payroll_list[][10], int payroll_count, Rectangle rect, Font font, int * scroll_value, bool *refresh_stack){
   Vector2 mousePos = GetMousePosition();
   //Stackables per column
+  float offsetY = rect.y;
   if(payroll_count <= 9){
     for(int i_col = 0; i_col < payroll_count; i_col++){
-      float offsetY = rect.y + (rect.height * i_col);
+      bool isOnSearch = false;
       Rectangle columnRect = {rect.x, offsetY, rect.width, rect.height};
+
+      //Check if payroll in search
+      if(strlen(searchString) > 0){
+        bool cond1 = matchString(payroll_list[i_col][0].innerString, searchString);
+        bool cond2 = matchString(payroll_list[i_col][1].innerString, searchString);
+        if(cond1 || cond2) isOnSearch = true;
+      } else { isOnSearch = true; }
+      if(strlen(searchString) > 0 && !isOnSearch) continue;
+
       //Draw stackable
-      stackable(columnRect, payroll_list[i_col], 10, 1.6, font, 18, (Color){0, 0, 0, 0}, i_col);
-      Rectangle deleteRect = textBoxRound("Del", font, 13, (Vector2){53, offsetY+15},
+      if(isOnSearch) offsetY += rect.height;
+      if(isOnSearch) stackable(columnRect, payroll_list[i_col], 10, 1.6, font, 18, (Color){0, 0, 0, 0}, i_col);
+      Rectangle deleteRect = textBoxRound("Del", font, 13, (Vector2){53, offsetY-30},
                                           (Vector2){10, 10}, 0.3, RED);
       if(CheckCollisionPointRec(mousePos, deleteRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
         deleteRecord(atoi(payroll_list[i_col][0].innerString));
@@ -436,12 +451,22 @@ void stackedPayrolls(Stack payroll_list[][10], int payroll_count, Rectangle rect
     if(*scroll_value + 8 >= payroll_count) *scroll_value = (payroll_count-1) - 8;
     if(*scroll_value < 0) *scroll_value = 0;
     for(int i_col = 0; i_col < 9; i_col++){
+      bool isOnSearch = false;
       int curIndex = i_col + *scroll_value;
-      float offsetY = rect.y + (rect.height * i_col);
       Rectangle columnRect = {rect.x, offsetY, rect.width, rect.height};
+
+      //Check if payroll in search
+      if(strlen(searchString) > 0){
+        bool cond1 = matchString(payroll_list[i_col][0].innerString, searchString);
+        bool cond2 = matchString(payroll_list[i_col][1].innerString, searchString);
+        if(cond1 || cond2) isOnSearch = true;
+      } else { isOnSearch = true; }
+      if(strlen(searchString) > 0 && !isOnSearch) continue;
+
       //Draw stackable
-      stackable(columnRect, payroll_list[curIndex], 10, 1.6, font, 18, (Color){0, 0, 0, 0}, curIndex);
-      Rectangle deleteRect = textBoxRound("Del", font, 13, (Vector2){53, offsetY+15},
+      if(isOnSearch) offsetY += rect.height;
+      if(isOnSearch) stackable(columnRect, payroll_list[curIndex], 10, 1.6, font, 18, (Color){0, 0, 0, 0}, i_col);
+      Rectangle deleteRect = textBoxRound("Del", font, 13, (Vector2){53, offsetY-30},
                                           (Vector2){10, 10}, 0.3, RED);
       if(CheckCollisionPointRec(mousePos, deleteRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
         deleteRecord(atoi(payroll_list[curIndex][0].innerString));
@@ -548,7 +573,7 @@ void universalInput(int *char_pressed, int *type_count, char string_typed[]){
 }
 
 //String methods
-bool matchString(const char *text, const char *pattern) {
+bool matchString(const char *text, const char *pattern){
     // Case-insensitive, partial match
     if (!text || !pattern) return false;
     char lowerText[256], lowerPattern[256];
